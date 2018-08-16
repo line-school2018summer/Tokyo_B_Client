@@ -1,25 +1,26 @@
 package com.tokyob.messageapp
 
+
 import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_talk.*
 
-class TalkActivity : AppCompatActivity() {
+class HomeActivity : AppCompatActivity() {
 
     private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
         when (item.itemId) {
             R.id.navigation_home -> {
-                message.setText(R.string.title_home)
+                supportFragmentManager.beginTransaction().replace(R.id.frameLayout, FriendFragment()).commit()
                 return@OnNavigationItemSelectedListener true
             }
             R.id.navigation_dashboard -> {
-                message.setText(R.string.title_dashboard)
+                supportFragmentManager.beginTransaction().replace(R.id.frameLayout, TalkFragment()).commit()
                 return@OnNavigationItemSelectedListener true
             }
             R.id.navigation_notifications -> {
-                message.setText(R.string.title_notifications)
+                supportFragmentManager.beginTransaction().replace(R.id.frameLayout, SettingFragment()).commit()
                 return@OnNavigationItemSelectedListener true
             }
         }
@@ -34,5 +35,7 @@ class TalkActivity : AppCompatActivity() {
         startActivity(intent)
 
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
+
+        supportFragmentManager.beginTransaction().replace(R.id.frameLayout, FriendFragment()).commit()
     }
 }
