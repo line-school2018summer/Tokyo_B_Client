@@ -25,8 +25,10 @@
         </activity>
         <activity
             android:name=".LoginActivity"
-            android:label="Login">
-        </activity>
+            android:label="Login"></activity>
+        <activity
+            android:name=".TalkActivity"
+            android:label="@string/title_activity_talk"></activity>
     </application>
 
 </manifest>
