@@ -7,6 +7,9 @@ import android.support.v4.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+
+import kotlinx.android.synthetic.main.fragment_friend.*
 
 
 // TODO: Rename parameter arguments, choose names that match
@@ -35,6 +38,17 @@ class FriendFragment : Fragment() {
             param1 = it.getString(ARG_PARAM1)
             param2 = it.getString(ARG_PARAM2)
         }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+            add_button.setOnClickListener{
+            val textView = TextView(getActivity())
+            textView.text = "セットしたいテキスト"
+            liner_layout.addView(textView)
+        }
+
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
