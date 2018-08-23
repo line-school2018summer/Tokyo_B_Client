@@ -28,6 +28,7 @@ import android.os.PersistableBundle
 import kotlinx.android.synthetic.main.activity_login.*
 
 class LoginActivity : AppCompatActivity(), SelectMenuFragment.OnSelectMenuFragmentListener {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)

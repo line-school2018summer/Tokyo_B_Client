@@ -40,10 +40,6 @@ import kotlinx.android.synthetic.main.fragment_register.*
 class RegisterFragment : Fragment() {
     private var mAuthTaskRegister: UserRegisterTask? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         // Inflate the layout for this fragment
@@ -84,14 +80,22 @@ class RegisterFragment : Fragment() {
         var focusView: View? = null
 
         // Check for a valid password confirmation, if the user entered one.
-        if (!TextUtils.isEmpty(passwordStr) && !TextUtils.isEmpty(passwordConfirmStr) && passwordStr!=passwordConfirmStr) {
+        if (TextUtils.isEmpty(passwordConfirmStr)) {
+            password_confirm.error = getString(R.string.error_field_required)
+            focusView = password_confirm
+            cancel = true
+        } else if (!TextUtils.isEmpty(passwordStr) && passwordStr!=passwordConfirmStr) {
             password_confirm.error = getString(R.string.error_invalid_password)
             focusView = password_confirm
             cancel = true
         }
 
         // Check for a valid password, if the user entered one.
-        if (!TextUtils.isEmpty(passwordStr) && !isPasswordValid(passwordStr)) {
+        if (TextUtils.isEmpty(passwordStr)) {
+            password.error = getString(R.string.error_field_required)
+            focusView = password
+            cancel = true
+        } else if (!isPasswordValid(passwordStr)) {
             password.error = getString(R.string.error_invalid_password)
             focusView = password
             cancel = true
@@ -203,5 +207,4 @@ class RegisterFragment : Fragment() {
             showProgress(false)
         }
     }
-
 }
