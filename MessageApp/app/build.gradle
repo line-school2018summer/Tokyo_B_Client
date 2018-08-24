@@ -23,6 +23,11 @@ android {
     }
 }
 
+repositories {
+    jcenter()
+}
+
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
@@ -33,4 +38,11 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.0"
+
+    implementation 'com.beust:klaxon:3.0.1'
 }
