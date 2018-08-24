@@ -29,14 +29,14 @@ import kotlinx.android.synthetic.main.fragment_talk.view.*
 
 fun getHtml(): String {
     val client = OkHttpClient()
-    val req = Request.Builder().url("http://ec2-54-95-200-122.ap-northeast-1.compute.amazonaws.com").get().build()
+    val req = Request.Builder().url("---").get().build()
     val resp = client.newCall(req).execute()
     return resp.body()!!.string()
 }
 
 fun postHtml(): String {
 
-    val url = "http://ec2-54-95-200-122.ap-northeast-1.compute.amazonaws.com" + "/friend/list"
+    val url = "---" + "/friend/list"
     val client: OkHttpClient = OkHttpClient.Builder().build()
 
     // create json
