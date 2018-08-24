@@ -137,18 +137,15 @@ class RegisterFragment : Fragment() {
     }
 
     private fun isUserNameValid(user_name: String): Boolean {
-        //TODO: Replace this with your own logic
-        return true
+        return user_name.length in 1..31
     }
 
     private fun isUserIDValid(user_id: String): Boolean {
-        //TODO: Replace this with your own logic
-        return true
+        return user_id.length in 4..12 && user_id.all { it -> it.isLetterOrDigit() }
     }
 
     private fun isPasswordValid(password: String): Boolean {
-        //TODO: Replace this with your own logic
-        return password.length > 4
+        return password.length in 6..12 && password.all { it -> it.isLetterOrDigit() }
     }
 
     /**
