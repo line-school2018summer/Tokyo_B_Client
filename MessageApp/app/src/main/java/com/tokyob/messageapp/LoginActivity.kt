@@ -23,15 +23,25 @@ import android.widget.TextView
 
 import java.util.ArrayList
 import android.Manifest.permission.READ_CONTACTS
+import android.app.Activity
+import android.content.Intent
 import android.os.PersistableBundle
 
 import kotlinx.android.synthetic.main.activity_login.*
 
 class LoginActivity : AppCompatActivity(), SelectMenuFragment.OnSelectMenuFragmentListener {
+    public var verifyID: Int = -1
+    public var userID: String? = null
+    public var userName: String? = null
+    public var userNumber: Int? = null
+    public var userPassword: String? = null
+    public var userToken: String? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
+        supportActionBar?.title = "LIME"
         supportFragmentManager.beginTransaction().replace(R.id.loginFrame, SelectMenuFragment()).commit()
     }
 
@@ -41,5 +51,16 @@ class LoginActivity : AppCompatActivity(), SelectMenuFragment.OnSelectMenuFragme
 
     override fun onRegisterSelected() {
         supportFragmentManager.beginTransaction().replace(R.id.loginFrame, RegisterFragment()).commit()
+    }
+
+    public fun sendUserInfo(){
+        val intent = Intent()
+        intent.putExtra("user_number", userNumber)
+        intent.putExtra("user_name", userName)
+        intent.putExtra("user_id", userID)
+        intent.putExtra("user_password", userPassword)
+        intent.putExtra("user_token", userToken)
+
+        setResult(Activity.RESULT_OK, intent)
     }
 }

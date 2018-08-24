@@ -67,12 +67,14 @@ class RegisterFragment : Fragment() {
         // Reset errors.
         user_name.error = null
         user_id.error = null
+        email.error = null
         password.error = null
         password_confirm.error = null
 
         // Store values at the time of the login attempt.
         val userNameStr = user_name.text.toString()
         val userIDStr = user_id.text.toString()
+        val emailStr = email.text.toString()
         val passwordStr = password.text.toString()
         val passwordConfirmStr = password_confirm.text.toString()
 
@@ -98,6 +100,17 @@ class RegisterFragment : Fragment() {
         } else if (!isPasswordValid(passwordStr)) {
             password.error = getString(R.string.error_invalid_password)
             focusView = password
+            cancel = true
+        }
+
+        // Check for a valid user id.
+        if (TextUtils.isEmpty(emailStr)) {
+            email.error = getString(R.string.error_field_required)
+            focusView = email
+            cancel = true
+        } else if (!isEmailValid(emailStr)) {
+            email.error = getString(R.string.error_invalid_email)
+            focusView = email
             cancel = true
         }
 
@@ -136,6 +149,10 @@ class RegisterFragment : Fragment() {
         }
     }
 
+    private fun isEmailValid(email: String): Boolean {
+        return email.contains("@")
+    }
+
     private fun isUserNameValid(user_name: String): Boolean {
         return user_name.length in 1..31
     }
@@ -164,7 +181,7 @@ class RegisterFragment : Fragment() {
                 .alpha((if (show) 0 else 1).toFloat())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        register_scroll.visibility = if (show) View.GONE else View.VISIBLE
+                        register_scroll?.visibility = if (show) View.GONE else View.VISIBLE
                     }
                 })
 
@@ -174,15 +191,16 @@ class RegisterFragment : Fragment() {
                 .alpha((if (show) 1 else 0).toFloat())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        register_progress.visibility = if (show) View.VISIBLE else View.GONE
+                        register_progress?.visibility = if (show) View.VISIBLE else View.GONE
                     }
                 })
     }
 
     inner class UserRegisterTask internal constructor(private val mUserName: String, private val mUserID: String, private val mPassword: String, private val mPasswordConfirm: String) : AsyncTask<Void, Void, Boolean>() {
+        private var verifyID: Int = -1
 
         override fun doInBackground(vararg params: Void): Boolean? {
-            // TODO: attempt authentication against a network service.
+
 
             return true
         }
@@ -192,7 +210,9 @@ class RegisterFragment : Fragment() {
             showProgress(false)
 
             if (success!!) {
-                activity?.finish()
+                val parentActivity = activity as? LoginActivity
+                parentActivity?.verifyID = verifyID
+                fragmentManager?.beginTransaction()?.replace(R.id.loginFrame, VerifyFragment())?.commit()
             } else {
                 password.error = getString(R.string.error_incorrect_password)
                 password.requestFocus()

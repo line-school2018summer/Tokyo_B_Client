@@ -5,85 +5,61 @@ import android.animation.AnimatorListenerAdapter
 import android.annotation.TargetApi
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import android.os.AsyncTask
 import android.os.Build
-import android.os.Bundle
-import android.support.v4.app.Fragment
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
-import kotlinx.android.synthetic.main.fragment_sign_in.*
+import kotlinx.android.synthetic.main.fragment_verify.*
 
-
-/**
- * A simple [Fragment] subclass.
- * Activities that contain this fragment must implement the
- * [SignInFragment.OnFragmentInteractionListener] interface
- * to handle interaction events.
- * Use the [SignInFragment.newInstance] factory method to
- * create an instance of this fragment.
- *
- */
-class SignInFragment : Fragment() {
-    private var mAuthTaskSignIn: UserSignInTask? = null
+class VerifyFragment : android.support.v4.app.Fragment() {
+    private var mAuthTaskVerify: UserVerifyTask? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_sign_in, container, false)
+        return inflater.inflate(R.layout.fragment_verify, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        password.setOnEditorActionListener(TextView.OnEditorActionListener { _, id, _ ->
+        code.setOnEditorActionListener(TextView.OnEditorActionListener { _, id, _ ->
             if (id == EditorInfo.IME_ACTION_DONE || id == EditorInfo.IME_NULL) {
-                attemptSignIn()
+                attemptVerify()
                 return@OnEditorActionListener true
             }
             false
         })
 
-        sign_in_button.setOnClickListener { attemptSignIn() }
+        verify_button.setOnClickListener { attemptVerify() }
     }
 
-    private fun attemptSignIn() {
-        if (mAuthTaskSignIn != null) {
+    private fun attemptVerify() {
+        if (mAuthTaskVerify != null) {
             return
         }
 
         // Reset errors.
-        user_id.error = null
-        password.error = null
+        code.error = null
 
         // Store values at the time of the login attempt.
-        val userIDStr = user_id.text.toString()
-        val passwordStr = password.text.toString()
+        val codeStr = code.text.toString()
 
         var cancel = false
         var focusView: View? = null
 
-        // Check for a valid password, if the user entered one.
-        if (TextUtils.isEmpty(passwordStr)) {
-            password.error = getString(R.string.error_field_required)
-            focusView = password
+        // Check for a valid user name.
+        if (TextUtils.isEmpty(codeStr)) {
+            code.error = getString(R.string.error_field_required)
+            focusView = code
             cancel = true
-        } else if (!isPasswordValid(passwordStr)) {
-            password.error = getString(R.string.error_invalid_password)
-            focusView = password
-            cancel = true
-        }
-
-        // Check for a valid user id.
-        if (TextUtils.isEmpty(userIDStr)) {
-            user_id.error = getString(R.string.error_field_required)
-            focusView = user_id
-            cancel = true
-        } else if (!isUserIDValid(userIDStr)) {
-            user_id.error = getString(R.string.error_invalid_email)
-            focusView = user_id
+        } else if (!isCodeValid(codeStr)) {
+            code.error = getString(R.string.error_invalid_email)
+            focusView = code
             cancel = true
         }
 
@@ -95,17 +71,13 @@ class SignInFragment : Fragment() {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true)
-            mAuthTaskSignIn = UserSignInTask(userIDStr, passwordStr)
-            mAuthTaskSignIn!!.execute(null as Void?)
+            mAuthTaskVerify = UserVerifyTask(codeStr)
+            mAuthTaskVerify!!.execute(null as Void?)
         }
     }
 
-    private fun isUserIDValid(user_id: String): Boolean {
-        return user_id.length in 4..12 && user_id.all { it -> it.isLetterOrDigit() }
-    }
-
-    private fun isPasswordValid(password: String): Boolean {
-        return password.length in 6..12 && password.all { it -> it.isLetterOrDigit() }
+    private fun isCodeValid(code: String): Boolean {
+        return code.length == 4
     }
 
     /**
@@ -118,40 +90,44 @@ class SignInFragment : Fragment() {
         // the progress spinner.
         val shortAnimTime = resources.getInteger(android.R.integer.config_shortAnimTime).toLong()
 
-        sign_in_scroll.visibility = if (show) View.GONE else View.VISIBLE
-        sign_in_scroll.animate()
+        verify_scroll.visibility = if (show) View.GONE else View.VISIBLE
+        verify_scroll.animate()
                 .setDuration(shortAnimTime)
                 .alpha((if (show) 0 else 1).toFloat())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        sign_in_scroll.visibility = if (show) View.GONE else View.VISIBLE
+                        verify_scroll.visibility = if (show) View.GONE else View.VISIBLE
                     }
                 })
 
-        sign_in_progress.visibility = if (show) View.VISIBLE else View.GONE
-        sign_in_progress.animate()
+        verify_progress.visibility = if (show) View.VISIBLE else View.GONE
+        verify_progress.animate()
                 .setDuration(shortAnimTime)
                 .alpha((if (show) 1 else 0).toFloat())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        sign_in_progress.visibility = if (show) View.VISIBLE else View.GONE
+                        verify_progress.visibility = if (show) View.VISIBLE else View.GONE
                     }
                 })
     }
 
-    inner class UserSignInTask internal constructor(private val mUserID: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean>() {
+    inner class UserVerifyTask internal constructor(private val mCode: String) : AsyncTask<Void, Void, Boolean>() {
         private val parentActivity = activity as? LoginActivity
+        private val mVerifyID = parentActivity?.verifyID
         private var mUserNumber: Int? = null
+        private var mUserID: String? = null
         private var mUserName: String? = null
+        private var mPassword: String? = null
         private var mToken: String? = null
 
         override fun doInBackground(vararg params: Void): Boolean? {
+
 
             return true
         }
 
         override fun onPostExecute(success: Boolean?) {
-            mAuthTaskSignIn = null
+            mAuthTaskVerify = null
             showProgress(false)
 
             if (success!!) {
@@ -163,13 +139,13 @@ class SignInFragment : Fragment() {
                 parentActivity?.sendUserInfo()
                 parentActivity?.finish()
             } else {
-                password.error = getString(R.string.error_incorrect_password)
-                password.requestFocus()
+                code.error = getString(R.string.error_incorrect_password)
+                code.requestFocus()
             }
         }
 
         override fun onCancelled() {
-            mAuthTaskSignIn = null
+            mAuthTaskVerify = null
             showProgress(false)
         }
     }
