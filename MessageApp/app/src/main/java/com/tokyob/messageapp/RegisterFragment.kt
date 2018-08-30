@@ -24,9 +24,19 @@ import android.text.TextUtils
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.TextView
+import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 
 import java.util.ArrayList
 import kotlinx.android.synthetic.main.fragment_register.*
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import com.fasterxml.jackson.module.kotlin.readValue
+import org.json.JSONObject
 
 /**
  * A simple [Fragment] subclass.
@@ -37,6 +47,14 @@ import kotlinx.android.synthetic.main.fragment_register.*
  * create an instance of this fragment.
  *
  */
+
+public data class Response(val error: Int, val content: MutableMap<String, Any>) {
+    @JsonAnySetter
+    fun setCntents(key: String, value: Any) {
+        this.content[key] = value
+    }
+}
+
 class RegisterFragment : Fragment() {
     private var mAuthTaskRegister: UserRegisterTask? = null
 
@@ -87,7 +105,7 @@ class RegisterFragment : Fragment() {
             focusView = password_confirm
             cancel = true
         } else if (!TextUtils.isEmpty(passwordStr) && passwordStr!=passwordConfirmStr) {
-            password_confirm.error = getString(R.string.error_invalid_password)
+            password_confirm.error = "This field should be equal to above."
             focusView = password_confirm
             cancel = true
         }
@@ -98,7 +116,7 @@ class RegisterFragment : Fragment() {
             focusView = password
             cancel = true
         } else if (!isPasswordValid(passwordStr)) {
-            password.error = getString(R.string.error_invalid_password)
+            password.error = "Password should have length between 5 and 13 and only have alphabet or number."
             focusView = password
             cancel = true
         }
@@ -120,7 +138,7 @@ class RegisterFragment : Fragment() {
             focusView = user_id
             cancel = true
         } else if (!isUserIDValid(userIDStr)) {
-            user_id.error = getString(R.string.error_invalid_email)
+            user_id.error = "ID should have length between 3 and 13 and only have alphabet or number."
             focusView = user_id
             cancel = true
         }
@@ -131,7 +149,7 @@ class RegisterFragment : Fragment() {
             focusView = user_name
             cancel = true
         } else if (!isUserNameValid(userIDStr)) {
-            user_name.error = getString(R.string.error_invalid_email)
+            user_name.error = "User Name should have length between 0 and 32."
             focusView = user_name
             cancel = true
         }
@@ -144,7 +162,7 @@ class RegisterFragment : Fragment() {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true)
-            mAuthTaskRegister = UserRegisterTask(userNameStr, userIDStr, passwordStr, passwordConfirmStr)
+            mAuthTaskRegister = UserRegisterTask(userNameStr, userIDStr, emailStr, passwordStr, passwordConfirmStr)
             mAuthTaskRegister!!.execute(null as Void?)
         }
     }
@@ -196,11 +214,24 @@ class RegisterFragment : Fragment() {
                 })
     }
 
-    inner class UserRegisterTask internal constructor(private val mUserName: String, private val mUserID: String, private val mPassword: String, private val mPasswordConfirm: String) : AsyncTask<Void, Void, Boolean>() {
-        private var verifyID: Int = -1
+    inner class UserRegisterTask internal constructor(private val mUserName: String, private val mUserID: String, private val mEmail: String, private val mPassword: String, private val mPasswordConfirm: String) : AsyncTask<Void, Void, Boolean>() {
+        private var receivedJson: String? = null
 
         override fun doInBackground(vararg params: Void): Boolean? {
+            val sendJson = JSONObject()
+            sendJson.put("target", "/account/register/register")
+            sendJson.put("authenticated", 0)
+            sendJson.put("user_id", mUserID)
+            sendJson.put("name", mUserName)
+            sendJson.put("email", mEmail)
+            sendJson.put("password", mPassword)
+            sendJson.put("password_confirm", mPasswordConfirm)
 
+            try {
+                receivedJson = postToServer("/account/register/register", sendJson)
+            } catch (e: InterruptedException) {
+                return false
+            }
 
             return true
         }
@@ -208,20 +239,58 @@ class RegisterFragment : Fragment() {
         override fun onPostExecute(success: Boolean?) {
             mAuthTaskRegister = null
             showProgress(false)
+            if (success!!){
+                val mapper = ObjectMapper().registerKotlinModule()
+                //var obj:Any? = null
 
-            if (success!!) {
-                val parentActivity = activity as? LoginActivity
-                parentActivity?.verifyID = verifyID
-                fragmentManager?.beginTransaction()?.replace(R.id.loginFrame, VerifyFragment())?.commit()
-            } else {
-                password.error = getString(R.string.error_incorrect_password)
-                password.requestFocus()
+                val obj:Response = mapper.readValue(receivedJson!!)
+
+                if (obj.error == 0) {
+                    val parentActivity = activity as? LoginActivity
+                    parentActivity?.verifyID = obj.content["verify_id"].toString().toInt()
+                    fragmentManager?.beginTransaction()?.replace(R.id.loginFrame, VerifyFragment())?.commit()
+                } else {
+                    if (obj.content["authenticated"].toString().toInt() == 1) {
+                        user_id.error = "This account has already logged in."
+                        user_id.requestFocus()
+                    } else if (obj.content["exist_id"].toString().toInt() == 1) {
+                        user_id.error = "This ID has been used."
+                        user_id.requestFocus()
+                    } else if (obj.content["bad_id"].toString().toInt() == 1) {
+                        user_id.error = "ID should have length between 3 and 13 and only have alphabet or number."
+                        user_id.requestFocus()
+                    } else if (obj.content["bad_name"].toString().toInt() == 1) {
+                        user_name.error = "User Name should have length between 0 and 32."
+                        user_name.requestFocus()
+                    } else if (obj.content["bad_password"].toString().toInt() == 1) {
+                        password.error = "Password should have length between 5 and 13 and only have alphabet or number."
+                        password.requestFocus()
+                    } else if (obj.content["password_confirm_does_not_match"].toString().toInt() == 1) {
+                        password_confirm.error = "This field should be equal to above."
+                        password_confirm.requestFocus()
+                    }
+                }
             }
         }
 
         override fun onCancelled() {
             mAuthTaskRegister = null
             showProgress(false)
+        }
+
+        fun postToServer(urlRelative: String, json: JSONObject): String {
+            val urlAbsolute = getString(R.string.server_url) + urlRelative
+            val client: OkHttpClient = OkHttpClient.Builder().build()
+
+            // post
+            val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
+            val request: Request = Request.Builder().url(urlAbsolute).post(postBody).build()
+            val response = client.newCall(request).execute()
+
+            // getResult
+            val result = response.body()!!.string()
+            response.close()
+            return result
         }
     }
 }

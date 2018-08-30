@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
+import android.widget.ImageView
 import kotlinx.android.synthetic.main.activity_home.*
 
 const val MY_REQUEST_CODE = 0

@@ -14,7 +14,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.android.synthetic.main.fragment_verify.*
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import org.json.JSONObject
 
 class VerifyFragment : android.support.v4.app.Fragment() {
     private var mAuthTaskVerify: UserVerifyTask? = null
@@ -58,7 +66,7 @@ class VerifyFragment : android.support.v4.app.Fragment() {
             focusView = code
             cancel = true
         } else if (!isCodeValid(codeStr)) {
-            code.error = getString(R.string.error_invalid_email)
+            code.error = "This Code is invalid"
             focusView = code
             cancel = true
         }
@@ -114,14 +122,20 @@ class VerifyFragment : android.support.v4.app.Fragment() {
     inner class UserVerifyTask internal constructor(private val mCode: String) : AsyncTask<Void, Void, Boolean>() {
         private val parentActivity = activity as? LoginActivity
         private val mVerifyID = parentActivity?.verifyID
-        private var mUserNumber: Int? = null
-        private var mUserID: String? = null
-        private var mUserName: String? = null
-        private var mPassword: String? = null
-        private var mToken: String? = null
+        private var receivedJson: String? = null
 
         override fun doInBackground(vararg params: Void): Boolean? {
+            val sendJson = JSONObject()
+            sendJson.put("target", "/account/register/register")
+            sendJson.put("authenticated", 0)
+            sendJson.put("verify_id", mVerifyID)
+            sendJson.put("code", mCode)
 
+            try {
+                receivedJson = postToServer("/account/register/verify", sendJson)
+            } catch (e: InterruptedException) {
+                return false
+            }
 
             return true
         }
@@ -129,24 +143,50 @@ class VerifyFragment : android.support.v4.app.Fragment() {
         override fun onPostExecute(success: Boolean?) {
             mAuthTaskVerify = null
             showProgress(false)
-
             if (success!!) {
-                parentActivity?.userID = mUserID
-                parentActivity?.userName = mUserName
-                parentActivity?.userNumber = mUserNumber
-                parentActivity?.userPassword = mPassword
-                parentActivity?.userToken = mToken
-                parentActivity?.sendUserInfo()
-                parentActivity?.finish()
-            } else {
-                code.error = getString(R.string.error_incorrect_password)
-                code.requestFocus()
+                val mapper = ObjectMapper().registerKotlinModule()
+                val obj: Response = mapper.readValue(receivedJson!!)
+
+                if (obj.error == 0) {
+                    parentActivity?.userID = obj.content["logged_user_id"].toString()
+                    parentActivity?.userName = obj.content["logged_name"].toString()
+                    parentActivity?.userNumber = obj.content["logged_id"].toString().toInt()
+                    parentActivity?.userToken = obj.content["token"].toString()
+                    parentActivity?.sendUserInfo()
+                    parentActivity?.finish()
+                } else {
+                    if (obj.content["authenticated"].toString().toInt() == 1) {
+                        code.error = "This account has already logged in."
+                        code.requestFocus()
+                    } else if (obj.content["invalid_verify_id"].toString().toInt() == 1) {
+                        code.error = "Invalid Verify ID"
+                        code.requestFocus()
+                    } else if (obj.content["invalid_code"].toString().toInt() == 1) {
+                        code.error = "Invalid Code"
+                        code.requestFocus()
+                    }
+                }
             }
         }
 
         override fun onCancelled() {
             mAuthTaskVerify = null
             showProgress(false)
+        }
+
+        fun postToServer(urlRelative: String, json: JSONObject): String {
+            val urlAbsolute = getString(R.string.server_url) + urlRelative
+            val client: OkHttpClient = OkHttpClient.Builder().build()
+
+            // post
+            val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
+            val request: Request = Request.Builder().url(urlAbsolute).post(postBody).build()
+            val response = client.newCall(request).execute()
+
+            // getResult
+            val result = response.body()!!.string()
+            response.close()
+            return result
         }
     }
 }
