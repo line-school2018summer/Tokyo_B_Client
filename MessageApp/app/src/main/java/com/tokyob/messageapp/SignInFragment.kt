@@ -15,7 +15,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.android.synthetic.main.fragment_sign_in.*
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import org.json.JSONObject
 
 
 /**
@@ -71,7 +79,7 @@ class SignInFragment : Fragment() {
             focusView = password
             cancel = true
         } else if (!isPasswordValid(passwordStr)) {
-            password.error = getString(R.string.error_invalid_password)
+            password.error = "Password should have length between 5 and 13 and only have alphabet or number."
             focusView = password
             cancel = true
         }
@@ -82,7 +90,7 @@ class SignInFragment : Fragment() {
             focusView = user_id
             cancel = true
         } else if (!isUserIDValid(userIDStr)) {
-            user_id.error = getString(R.string.error_invalid_email)
+            user_id.error = "ID should have length between 3 and 13 and only have alphabet or number."
             focusView = user_id
             cancel = true
         }
@@ -140,12 +148,20 @@ class SignInFragment : Fragment() {
     }
 
     inner class UserSignInTask internal constructor(private val mUserID: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean>() {
-        private val parentActivity = activity as? LoginActivity
-        private var mUserNumber: Int? = null
-        private var mUserName: String? = null
-        private var mToken: String? = null
+        private var receivedJson: String? = null
 
         override fun doInBackground(vararg params: Void): Boolean? {
+            val sendJson = JSONObject()
+            sendJson.put("target", "/account/login")
+            sendJson.put("authenticated", 0)
+            sendJson.put("user_id", mUserID)
+            sendJson.put("password", mPassword)
+
+            try {
+                receivedJson = postToServer("/account/login", sendJson)
+            } catch (e: InterruptedException) {
+                return false
+            }
 
             return true
         }
@@ -153,24 +169,52 @@ class SignInFragment : Fragment() {
         override fun onPostExecute(success: Boolean?) {
             mAuthTaskSignIn = null
             showProgress(false)
+            if (success!!){
+                val mapper = ObjectMapper().registerKotlinModule()
+                val obj:Response = mapper.readValue(receivedJson!!)
 
-            if (success!!) {
-                parentActivity?.userID = mUserID
-                parentActivity?.userName = mUserName
-                parentActivity?.userNumber = mUserNumber
-                parentActivity?.userPassword = mPassword
-                parentActivity?.userToken = mToken
-                parentActivity?.sendUserInfo()
-                parentActivity?.finish()
-            } else {
-                password.error = getString(R.string.error_incorrect_password)
-                password.requestFocus()
+                if (obj.error == 0) {
+                    val parentActivity = activity as? LoginActivity
+                    parentActivity?.userID = obj.content["logged_user_id"].toString()
+                    parentActivity?.userName = obj.content["logged_name"].toString()
+                    parentActivity?.userNumber = obj.content["logged_id"].toString().toInt()
+                    parentActivity?.userPassword = mPassword
+                    parentActivity?.userToken = obj.content["token"].toString()
+                    parentActivity?.sendUserInfo()
+                    parentActivity?.finish()
+                } else {
+                    if (obj.content["authenticated"].toString().toInt() == 1) {
+                        user_id.error = "This account has already logged in."
+                        user_id.requestFocus()
+                    } else if (obj.content["missing_id"].toString().toInt() == 1) {
+                        user_id.error = "This ID is not used."
+                        user_id.requestFocus()
+                    } else if (obj.content["invalid_password"].toString().toInt() == 1) {
+                        user_id.error = "Invalid Password"
+                        user_id.requestFocus()
+                    }
+                }
             }
         }
 
         override fun onCancelled() {
             mAuthTaskSignIn = null
             showProgress(false)
+        }
+
+        fun postToServer(urlRelative: String, json: JSONObject): String {
+            val urlAbsolute = getString(R.string.server_url) + urlRelative
+            val client: OkHttpClient = OkHttpClient.Builder().build()
+
+            // post
+            val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
+            val request: Request = Request.Builder().url(urlAbsolute).post(postBody).build()
+            val response = client.newCall(request).execute()
+
+            // getResult
+            val result = response.body()!!.string()
+            response.close()
+            return result
         }
     }
 }
