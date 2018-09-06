@@ -160,6 +160,7 @@ class SignInFragment : Fragment() {
             try {
                 receivedJson = postToServer("/account/login", sendJson)
             } catch (e: Exception) {
+                println(e.message)
                 return false
             }
 
