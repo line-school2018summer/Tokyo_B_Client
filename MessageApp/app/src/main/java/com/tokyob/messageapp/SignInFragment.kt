@@ -159,7 +159,7 @@ class SignInFragment : Fragment() {
 
             try {
                 receivedJson = postToServer("/account/login", sendJson)
-            } catch (e: InterruptedException) {
+            } catch (e: Exception) {
                 return false
             }
 
