@@ -45,8 +45,6 @@ class HomeActivity : AppCompatActivity() {
         startActivityForResult(intent, MY_REQUEST_CODE)
 
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
-
-        supportFragmentManager.beginTransaction().replace(R.id.frameLayout, FriendFragment()).commit()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -58,6 +56,7 @@ class HomeActivity : AppCompatActivity() {
             userNumber = received.getIntExtra("user_number", -1)
             userPassword = received.getStringExtra("user_password")
             userToken = received.getStringExtra("user_token")
+            supportFragmentManager.beginTransaction().replace(R.id.frameLayout, FriendFragment()).commit()
         }
     }
 }
