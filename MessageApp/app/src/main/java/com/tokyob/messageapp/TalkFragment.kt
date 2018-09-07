@@ -35,15 +35,6 @@ import org.json.JSONObject
 
 import kotlinx.android.synthetic.main.fragment_talk.view.*
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class ResponseFriendList(val error: Int, val content: FriendListOK)
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class FriendListOK(val message: String, val friends: List<Friend>)
-data class Friend(val user_id: String, val name: String, val id: Int)
-
-data class ResponseFriendListError(val error: Int, val content: FriendListError)
-data class FriendListError(val not_authenticated: Int, val invalid_verify: Int)
-
 class TalkFragment : Fragment() {
     var friend_name :String = "test"
     lateinit var friend_list: JsonObject
