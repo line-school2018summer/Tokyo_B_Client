@@ -4,6 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
     <!-- sign_in progress -->
     <ProgressBar
         android:id="@+id/sign_in_progress"
@@ -23,10 +29,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+            <android.support.design.widget.TextInputLayout
+                android:id="@+id/greenbox"
+                android:layout_width="match_parent"
+                android:layout_height="207dp"
+                android:background="#3DCE2C"
+                android:clickable="false"
+                android:visibility="visible">
+
+                <ImageView
+                    android:id="@+id/imageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="188dp"
+                    android:contentDescription="Lime"
+                    app:srcCompat="@drawable/lime"
+                    tools:layout_editor_absoluteX="32dp"
+                    tools:layout_editor_absoluteY="175dp" />
+            </android.support.design.widget.TextInputLayout>
 
             <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:layout_marginTop="160dp">
 
                 <EditText
                     android:id="@+id/user_id"
@@ -35,13 +61,17 @@
                     android:hint="User ID"
                     android:inputType="text"
                     android:maxLines="1"
-                    android:singleLine="true" />
+                    android:singleLine="true"
+                    android:textColor="#3F95A2" />
 
             </android.support.design.widget.TextInputLayout>
 
             <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:layout_marginTop="40dp">
 
                 <EditText
                     android:id="@+id/password"
@@ -52,20 +82,25 @@
                     android:imeOptions="actionUnspecified"
                     android:inputType="textPassword"
                     android:maxLines="1"
-                    android:singleLine="true" />
+                    android:singleLine="true"
+                    android:textColor="#3F95A2" />
 
             </android.support.design.widget.TextInputLayout>
 
             <Button
                 android:id="@+id/sign_in_button"
                 style="?android:textAppearanceSmall"
-                android:layout_width="match_parent"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="30dp"
+                android:background="#2699FB"
                 android:text="@string/action_sign_in"
+                android:textColor="#FFFFFF"
                 android:textStyle="bold" />
 
         </LinearLayout>
     </ScrollView>
+    </android.support.constraint.ConstraintLayout>
 
 </RelativeLayout>

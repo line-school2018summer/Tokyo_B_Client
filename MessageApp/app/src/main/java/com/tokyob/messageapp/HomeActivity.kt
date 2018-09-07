@@ -13,6 +13,7 @@ const val MY_REQUEST_CODE = 0
 
 class HomeActivity : AppCompatActivity() {
 
+
     var userID: String? = null
     var userName: String? = null
     var userNumber: Int? = null
@@ -38,8 +39,18 @@ class HomeActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
+        // ここで1秒間スリープし、スプラッシュを表示させたままにする。
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+        }
+
+        // スプラッシュthemeを通常themeに変更する
+        setTheme(R.style.AppTheme)
         setContentView(R.layout.activity_home)
+
 
         val intent = Intent(applicationContext, LoginActivity::class.java)
         startActivityForResult(intent, MY_REQUEST_CODE)
