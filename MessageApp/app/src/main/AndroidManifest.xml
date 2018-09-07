@@ -17,9 +17,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
-
         tools:ignore="GoogleAppIndexingWarning">
-
         <activity
             android:name=".HomeActivity"
             android:label="@string/app_name">
@@ -35,6 +33,15 @@
         <activity
             android:name=".TalkActivity"
             android:label="@string/title_activity_talk" />
+        <activity
+            android:name=".ChangeNameActivity"
+            android:label="@string/title_activity_change_name" />
+        <activity
+            android:name=".ChangeUserIDActivity"
+            android:label="@string/title_activity_change_user_id" />
+        <activity
+            android:name=".ChangePassWordActivity"
+            android:label="@string/title_activity_change_pass_word"></activity>
     </application>
 
 </manifest>

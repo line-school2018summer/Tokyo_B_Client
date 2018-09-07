@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">MessageApp</string>
-    <string name="server_url">http://10.0.2.2:5000</string>
+    <string name="server_url">http://ec2-user@ec2-54-95-200-122.ap-northeast-1.compute.amazonaws.com</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
@@ -23,5 +23,8 @@
     <string name="fragment_talk">Talk</string>
     <string name="fragment_friend">Friend</string>
     <string name="fragment_setting">Setting</string>
+    <string name="title_activity_change_name">ChangeNameActivity</string>
+    <string name="title_activity_change_user_id">ChangeUserIDActivity</string>
+    <string name="title_activity_change_pass_word">ChangePassWordActivity</string>
 
 </resources>
