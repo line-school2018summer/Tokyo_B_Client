@@ -43,7 +43,8 @@ class FriendFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-            add_button.setOnClickListener{
+
+        add_button.setOnClickListener{
             val textView = TextView(getActivity())
             textView.text = "セットしたいテキスト"
             liner_layout.addView(textView)

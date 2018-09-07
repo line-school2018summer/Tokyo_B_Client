@@ -1,5 +1,6 @@
 package com.tokyob.messageapp
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -16,6 +17,13 @@ import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Parser
 import com.beust.klaxon.lookup
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import android.content.res.Resources
+import android.widget.Toast
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import kotlinx.android.synthetic.main.fragment_register.*
 
 import kotlinx.android.synthetic.main.fragment_talk.*
 
@@ -27,34 +35,14 @@ import org.json.JSONObject
 
 import kotlinx.android.synthetic.main.fragment_talk.view.*
 
-fun getHtml(): String {
-    val client = OkHttpClient()
-    val req = Request.Builder().url("---").get().build()
-    val resp = client.newCall(req).execute()
-    return resp.body()!!.string()
-}
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class ResponseFriendList(val error: Int, val content: FriendListOK)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FriendListOK(val message: String, val friends: List<Friend>)
+data class Friend(val user_id: String, val name: String, val id: Int)
 
-fun postHtml(): String {
-
-    val url = "---" + "/friend/list"
-    val client: OkHttpClient = OkHttpClient.Builder().build()
-
-    // create json
-    val json = JSONObject()
-    json.put("authenticated", 1)
-    json.put("id", 2)
-    json.put("token", "014283b9607c51dd3d3df66243cbc5ebfeeec1e632c8f7f90a1c155dffab0f0c")
-
-    // post
-    val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
-    val request: Request = Request.Builder().url(url).post(postBody).build()
-    val response = client.newCall(request).execute()
-
-    // getResult
-    val result: String = response.body()!!.string()
-    response.close()
-    return result
-}
+data class ResponseFriendListError(val error: Int, val content: FriendListError)
+data class FriendListError(val not_authenticated: Int, val invalid_verify: Int)
 
 class TalkFragment : Fragment() {
     var friend_name :String = "test"
@@ -67,19 +55,89 @@ class TalkFragment : Fragment() {
 
     }
 
+    fun postHtml(): String {
+
+        val url = getString(R.string.server_url) + "/friend/list"
+        val client: OkHttpClient = OkHttpClient.Builder().build()
+
+        // create json
+        val json = JSONObject()
+        var homeActivity = activity as HomeActivity
+        json.put("authenticated", 1)
+        json.put("id", homeActivity.userNumber)
+        json.put("token", homeActivity.userToken)
+
+        // post
+        val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
+        val request: Request = Request.Builder().url(url).post(postBody).build()
+        val response = client.newCall(request).execute()
+
+        // getResult
+        val result: String = response.body()!!.string()
+        response.close()
+        return result
+    }
+
+    fun getHtml(): String {
+        val client = OkHttpClient()
+        val req = Request.Builder().url(getString(R.string.server_url)).get().build()
+        val resp = client.newCall(req).execute()
+        return resp.body()!!.string()
+    }
+
+
     inner class MyAsyncTask: AsyncTask<Void, Void, String>() {
 
+        private var receivedJson: String = ""
+
         override fun doInBackground(vararg p0: Void?): String {
-            return postHtml()
+            try {
+                receivedJson = postHtml()
+            } catch (e: Exception) {
+                println(e.message)
+                return ""
+            }
+            return receivedJson
         }
 
         override fun onPostExecute(result: String) {
             super.onPostExecute(result)
 
-            val parser: Parser = Parser()
-            val stringBuilder: StringBuilder = StringBuilder(result)
-            val json: JsonObject = parser.parse(stringBuilder) as JsonObject
+            if (receivedJson != ""){
+                val mapper = ObjectMapper().registerKotlinModule()
+                val obj:Response = mapper.readValue(receivedJson!!)
 
+                if (obj.error == 0) {
+                    val objOK: ResponseFriendList = mapper.readValue(receivedJson!!)
+                    val friendsList = objOK.content.friends
+
+                    for (i in friendsList){
+
+                        val button = Button(getActivity())
+                        button.setText(i.name)
+
+                        button.setOnClickListener {
+                            val intent = Intent(getActivity(), TalkActivity::class.java)
+                            var homeActivity = activity as HomeActivity
+                            intent.putExtra("id", homeActivity.userNumber)
+                            intent.putExtra("user_id", homeActivity.userID)
+                            intent.putExtra("friend_id", i.id)
+                            intent.putExtra("token", homeActivity.userToken)
+
+                            startActivity(intent)
+                        }
+                        liner_layout.addView(button)
+                    }
+                } else {
+                    val objNG: ResponseFriendListError = mapper.readValue(receivedJson!!)
+                    if (objNG.content.not_authenticated == 1) {
+                        Toast.makeText(activity, "Without Login", Toast.LENGTH_LONG).show()
+                    }
+                    else if (objNG.content.invalid_verify == 1) {
+                        Toast.makeText(activity, "Invalid Verification", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
         }
     }
 
@@ -87,29 +145,6 @@ class TalkFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
 
-        /*
-        a.forEach { (k, v) ->
-            s = v
-        }
-        */
-
-        add_button.setOnClickListener{
-            val button = Button(getActivity())
-            button.setText("test")
-
-            button.setOnClickListener {
-                val intent = Intent(getActivity(), TalkActivity::class.java)
-                val id = arrayOf(1, 2)
-                intent.putExtra("user_id", id)
-                startActivity(intent)
-            }
-
-            liner_layout.addView(button)
-
-            //val textView = TextView(getActivity())
-            //textView.text = friend_name
-            //liner_layout.addView(textView)
-        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
