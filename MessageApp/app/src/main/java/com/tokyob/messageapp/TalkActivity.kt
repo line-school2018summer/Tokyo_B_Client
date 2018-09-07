@@ -33,13 +33,13 @@ class TalkActivity : Activity() {
 
         val textView1 = TextView(this)
         textView1.text = this.userID
-        liner_layout.addView(textView1)
+        //liner_layout.addView(textView1)
         val textView2 = TextView(this)
         textView2.text = this.friendID
-        liner_layout.addView(textView2)
+        //liner_layout.addView(textView2)
         val textView3 = TextView(this)
         textView3.text = this.userToken
-        liner_layout.addView(textView3)
+        //liner_layout.addView(textView3)
 
 
     }
