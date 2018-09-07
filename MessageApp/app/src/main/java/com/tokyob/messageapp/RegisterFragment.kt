@@ -229,7 +229,8 @@ class RegisterFragment : Fragment() {
 
             try {
                 receivedJson = postToServer("/account/register/register", sendJson)
-            } catch (e: InterruptedException) {
+            } catch (e: Exception) {
+                println(e.message)
                 return false
             }
 
