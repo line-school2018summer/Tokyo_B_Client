@@ -183,13 +183,13 @@ class SignInFragment : Fragment() {
                     parentActivity?.sendUserInfo()
                     parentActivity?.finish()
                 } else {
-                    if (obj.content["authenticated"].toString().toInt() == 1) {
+                    if (obj.content["authenticated"].toString() == "1") {
                         user_id.error = "This account has already logged in."
                         user_id.requestFocus()
-                    } else if (obj.content["missing_id"].toString().toInt() == 1) {
+                    } else if (obj.content["missing_id"].toString() == "1") {
                         user_id.error = "This ID is not used."
                         user_id.requestFocus()
-                    } else if (obj.content["invalid_password"].toString().toInt() == 1) {
+                    } else if (obj.content["invalid_password"].toString() == "1") {
                         user_id.error = "Invalid Password"
                         user_id.requestFocus()
                     }
@@ -204,7 +204,7 @@ class SignInFragment : Fragment() {
 
         fun postToServer(urlRelative: String, json: JSONObject): String {
             val urlAbsolute = getString(R.string.server_url) + urlRelative
-            val client: OkHttpClient = OkHttpClient.Builder().build()
+            val client: OkHttpClient = OkHttpClient.Builder().retryOnConnectionFailure(true).build()
 
             // post
             val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())

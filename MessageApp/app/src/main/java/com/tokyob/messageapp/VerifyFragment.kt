@@ -126,7 +126,7 @@ class VerifyFragment : android.support.v4.app.Fragment() {
 
         override fun doInBackground(vararg params: Void): Boolean? {
             val sendJson = JSONObject()
-            sendJson.put("target", "/account/register/register")
+            sendJson.put("target", "/account/register/verify")
             sendJson.put("authenticated", 0)
             sendJson.put("verify_id", mVerifyID)
             sendJson.put("code", mCode)
