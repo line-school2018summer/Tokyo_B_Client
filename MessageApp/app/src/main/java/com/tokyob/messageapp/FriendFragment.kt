@@ -44,8 +44,7 @@ import org.json.JSONObject
 data class ResponseFriendList(val error: Int, val content: FriendListOK)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FriendListOK(val message: String, val friends: List<Friend>)
-data class Friend(val id: User)
-data class User(val user_id: String, val name: String)
+data class Friend(val user_id: String, val name: String, val id: Int)
 
 data class ResponseFriendListError(val error: Int, val content: FriendListError)
 data class FriendListError(val not_authenticated: Int, val invalid_verify: Int)
@@ -156,6 +155,7 @@ class FriendFragment : Fragment() {
                 if (obj.error == 0) {
                     val objOK: ResponseFriendList = mapper.readValue(receivedJson!!)
                     val friendsList = objOK.content.friends
+                    friend_layout.removeAllViews()
                     friendsList.forEach{ makeFriendButton(it) }
                 } else {
                     val objNG: ResponseFriendListError = mapper.readValue(receivedJson!!)
@@ -186,11 +186,11 @@ class FriendFragment : Fragment() {
         fun makeFriendButton(friend: Friend) {
             val parentActivity = activity as? HomeActivity
             val button = Button(parentActivity)
-            val text = friend.id.name + "\n  @" + friend.id.user_id
+            val text = friend.name + "\n  @" + friend.user_id
             button.text = text
-            button.layoutParams = ViewGroup.LayoutParams((250 * resources.displayMetrics.density).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            button.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             friend_layout.addView(button)
-            button.setOnClickListener { makeFriendPopup(friend.id.name, friend.id.user_id) }
+            button.setOnClickListener { makeFriendPopup(friend.name, friend.user_id) }
         }
 
         fun makeFriendPopup(friend_userName: String, friend_userID: String){
@@ -213,14 +213,17 @@ class FriendFragment : Fragment() {
                 popupWindow.exitTransition = slideOut
             }
             val text = friend_userName + "\n  @" + friend_userID
-            friend_name.text = text
+            val fn = view.findViewById<TextView>(R.id.friend_name)
+            fn.text = text
 
-            talk_button.setOnClickListener{
+            val tb = view.findViewById<Button>(R.id.talk_button)
+            tb.setOnClickListener{
                 //TODO move to TalkActivity
             }
 
-            add_or_remove_button.text = "Remove from friend list"
-            add_or_remove_button.setOnClickListener {
+            val arb = view.findViewById<Button>(R.id.add_or_remove_button)
+            arb.text = "Remove from friend list"
+            arb.setOnClickListener {
                 try {
                     removeFriendTask(userID!!, userNumber!!, userToken!!, friend_userID).execute()
                     popupWindow.dismiss()
@@ -228,16 +231,78 @@ class FriendFragment : Fragment() {
                     println(e.message)
                 }
             }
+
+            TransitionManager.beginDelayedTransition(friend_parent)
+            popupWindow.showAtLocation(
+                    friend_parent, // Location to display popup window
+                    Gravity.CENTER, // Exact position of layout to display popup
+                    0, // X offset
+                    0 // Y offset
+            )
         }
     }
 
     inner class removeFriendTask(private val mUserID: String, private val mUserNumber: Int, private val mToken: String, private val mFriendID: String): AsyncTask<Void, Void, Boolean>() {
-        override fun doInBackground(vararg params: Void?): Boolean {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        private var receivedJson: String? = null
+
+        override fun doInBackground(vararg params: Void): Boolean? {
+            val sendJson = JSONObject()
+            sendJson.put("use_id", 0)
+            sendJson.put("target_id", mFriendID)
+            sendJson.put("target", "/friend/remove")
+            sendJson.put("authenticated", 1)
+            sendJson.put("id", mUserNumber)
+            sendJson.put("token", mToken)
+
+
+            try {
+                receivedJson = postToServer("/friend/remove", sendJson)
+            } catch (e: Exception) {
+                println(e.message)
+                return false
+            }
+
+            return true
         }
 
-        override fun onPostExecute(result: Boolean?) {
-            super.onPostExecute(result)
+        override fun onPostExecute(success: Boolean?) {
+            showProgress(false)
+            if (success!!){
+                val mapper = ObjectMapper().registerKotlinModule()
+                val obj:Response = mapper.readValue(receivedJson!!)
+
+                if (obj.error == 0) {
+                    Toast.makeText(activity, obj.content["message"].toString(), Toast.LENGTH_LONG).show()
+                    getFriendListTask(mUserNumber, mToken).execute()
+                } else {
+                    if (obj.content["not_authenticated"].toString().toInt() == 1) {
+                        Toast.makeText(activity, "Invalid Verification", Toast.LENGTH_LONG).show()
+                    } else if (obj.content["invalid_verify"].toString().toInt() == 1) {
+                        Toast.makeText(activity, "Invalid Verification", Toast.LENGTH_LONG).show()
+                    } else if (obj.content["unexist_id"].toString().toInt() == 1) {
+                        Toast.makeText(activity, "This user does not exist", Toast.LENGTH_LONG).show()
+                    } else if (obj.content["self_removing"].toString().toInt() == 1) {
+                        Toast.makeText(activity, "This ID is you", Toast.LENGTH_LONG).show()
+                    } else if (obj.content["already_stranger"].toString().toInt() == 1) {
+                        Toast.makeText(activity, "This user has already been a stranger", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        fun postToServer(urlRelative: String, json: JSONObject): String {
+            val urlAbsolute = getString(R.string.server_url) + urlRelative
+            val client: OkHttpClient = OkHttpClient.Builder().build()
+
+            // post
+            val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
+            val request: Request = Request.Builder().url(urlAbsolute).post(postBody).build()
+            val response = client.newCall(request).execute()
+
+            // getResult
+            val result = response.body()!!.string()
+            response.close()
+            return result
         }
     }
 
@@ -273,7 +338,7 @@ class FriendFragment : Fragment() {
                 val obj:Response = mapper.readValue(receivedJson!!)
 
                 if (obj.error == 0) {
-                    makeSearchResultPopUp(obj.content["user_id"].toString(), obj.content["name"].toString())
+                    makeSearchResultPopUp(obj.content["name"].toString(), obj.content["user_id"].toString())
                 } else {
                     if (obj.content["not_authenticated"].toString().toInt() == 1) {
 
