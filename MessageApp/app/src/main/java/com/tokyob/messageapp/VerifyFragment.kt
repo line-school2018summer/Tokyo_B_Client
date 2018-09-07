@@ -133,7 +133,8 @@ class VerifyFragment : android.support.v4.app.Fragment() {
 
             try {
                 receivedJson = postToServer("/account/register/verify", sendJson)
-            } catch (e: InterruptedException) {
+            } catch (e: Exception) {
+                println(e.message)
                 return false
             }
 
