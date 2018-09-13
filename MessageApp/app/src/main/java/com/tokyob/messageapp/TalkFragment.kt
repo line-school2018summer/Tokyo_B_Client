@@ -18,12 +18,12 @@ import com.beust.klaxon.Parser
 import com.beust.klaxon.lookup
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import android.content.res.Resources
+import android.os.Handler
 import android.widget.Toast
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import kotlinx.android.synthetic.main.fragment_register.*
 
 import kotlinx.android.synthetic.main.fragment_talk.*
 
@@ -33,30 +33,27 @@ import okhttp3.MediaType
 import okhttp3.RequestBody
 import org.json.JSONObject
 
-import kotlinx.android.synthetic.main.fragment_talk.view.*
+data class TalkListOK(val error: Int, val content: TalkListContent)
+data class TalkListContent(val message: String, val groups: Map<String, String>)
+
+data class TalkListNG(val error: Int, val content: TalkListError)
+data class TalkListError(val not_authenticated: Int, val invalid_verify: Int)
+
+data class makeGroupNG(val error: Int, val content: makeGroupError)
+data class makeGroupError(val not_authenticated: Int, val invalid_verify: Int,
+                          val invalid_talk_id: Int, val personal_chat: Int,
+                          val already_joined:Int)
 
 class TalkFragment : Fragment() {
-    var friend_name :String = "test"
-    lateinit var friend_list: JsonObject
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        MyAsyncTask().execute()
-
     }
 
-    fun postHtml(): String {
+    fun postHtml(relativeUrl: String, json: JSONObject): String {
 
-        val url = getString(R.string.server_url) + "/friend/list"
+        val url = getString(R.string.server_url) + relativeUrl
         val client: OkHttpClient = OkHttpClient.Builder().build()
-
-        // create json
-        val json = JSONObject()
-        var homeActivity = activity as HomeActivity
-        json.put("authenticated", 1)
-        json.put("id", homeActivity.userNumber)
-        json.put("token", homeActivity.userToken)
 
         // post
         val postBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString())
@@ -69,50 +66,47 @@ class TalkFragment : Fragment() {
         return result
     }
 
-    fun getHtml(): String {
-        val client = OkHttpClient()
-        val req = Request.Builder().url(getString(R.string.server_url)).get().build()
-        val resp = client.newCall(req).execute()
-        return resp.body()!!.string()
-    }
-
-
-    inner class MyAsyncTask: AsyncTask<Void, Void, String>() {
-
+    inner class getTalkListTask: AsyncTask<Void, Void, Boolean>() {
         private var receivedJson: String = ""
+        private val homeActivity = activity as HomeActivity
 
-        override fun doInBackground(vararg p0: Void?): String {
+        override fun doInBackground(vararg p0: Void?): Boolean {
+            val sendJson = JSONObject()
+            sendJson.put("target", "/chat/list")
+            sendJson.put("authenticated", 1)
+            sendJson.put("id", homeActivity.userNumber)
+            sendJson.put("token", homeActivity.userToken)
+
             try {
-                receivedJson = postHtml()
+                receivedJson = postHtml("/chat/list", sendJson)
             } catch (e: Exception) {
                 println(e.message)
-                return ""
+                return false
             }
-            return receivedJson
+            return true
         }
 
-        override fun onPostExecute(result: String) {
-            super.onPostExecute(result)
+        override fun onPostExecute(success: Boolean) {
+            super.onPostExecute(success)
 
-            if (receivedJson != ""){
+            if (success){
                 val mapper = ObjectMapper().registerKotlinModule()
-                val obj:Response = mapper.readValue(receivedJson!!)
+                val obj:Response = mapper.readValue(receivedJson)
 
                 if (obj.error == 0) {
-                    val objOK: ResponseFriendList = mapper.readValue(receivedJson!!)
-                    val friendsList = objOK.content.friends
+                    val objOK: TalkListOK = mapper.readValue(receivedJson)
+                    val talkList = objOK.content.groups
 
-                    for (i in friendsList){
-
+                    for (key in talkList.keys){
                         val button = Button(getActivity())
-                        button.setText(i.name)
+                        button.text = talkList[key]
 
                         button.setOnClickListener {
                             val intent = Intent(getActivity(), TalkActivity::class.java)
-                            var homeActivity = activity as HomeActivity
                             intent.putExtra("id", homeActivity.userNumber)
                             intent.putExtra("user_id", homeActivity.userID)
-                            intent.putExtra("friend_id", i.id)
+                            intent.putExtra("group_name", talkList[key])
+                            intent.putExtra("group_id", key)
                             intent.putExtra("token", homeActivity.userToken)
 
                             startActivity(intent)
@@ -120,7 +114,49 @@ class TalkFragment : Fragment() {
                         liner_layout.addView(button)
                     }
                 } else {
-                    val objNG: ResponseFriendListError = mapper.readValue(receivedJson!!)
+                    val objNG: TalkListNG = mapper.readValue(receivedJson)
+                    if (objNG.content.not_authenticated == 1) {
+                        Toast.makeText(activity, "Without Login", Toast.LENGTH_LONG).show()
+                    }
+                    else if (objNG.content.invalid_verify == 1) {
+                        Toast.makeText(activity, "Invalid Verification", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    inner class createGroupTask internal constructor(private val mGroupName: String): AsyncTask<Void, Void, Boolean>() {
+        private var receivedJson: String = ""
+        private val homeActivity = activity as HomeActivity
+
+        override fun doInBackground(vararg p0: Void?): Boolean {
+            val sendJson = JSONObject()
+            val contentJson = JSONObject()
+            contentJson.put("group_name", mGroupName)
+            sendJson.put("target", "/chat/make")
+            sendJson.put("authenticated", 1)
+            sendJson.put("id", homeActivity.userNumber)
+            sendJson.put("token", homeActivity.userToken)
+            sendJson.put("content", contentJson)
+
+            try {
+                receivedJson = postHtml("/chat/make", sendJson)
+            } catch (e: Exception) {
+                println(e.message)
+                return false
+            }
+            return true
+        }
+
+        override fun onPostExecute(success: Boolean) {
+            super.onPostExecute(success)
+
+            if (success){
+                val mapper = ObjectMapper().registerKotlinModule()
+                val obj:Response = mapper.readValue(receivedJson)
+                if (obj.error == 1) {
+                    val objNG: makeGroupNG = mapper.readValue(receivedJson)
                     if (objNG.content.not_authenticated == 1) {
                         Toast.makeText(activity, "Without Login", Toast.LENGTH_LONG).show()
                     }
@@ -135,7 +171,20 @@ class TalkFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        talk_start_button.setOnClickListener {
+            val groupName = group_name.text.toString()
+            createGroupTask(groupName).execute()
+            val intent = Intent(getActivity(), TalkActivity::class.java)
+            var homeActivity = activity as HomeActivity
+            intent.putExtra("id", homeActivity.userNumber)
+            intent.putExtra("user_id", homeActivity.userID)
+            intent.putExtra("group_name", groupName)
+            intent.putExtra("token", homeActivity.userToken)
+            startActivity(intent)
+        }
 
+
+        getTalkListTask().execute()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -144,59 +193,4 @@ class TalkFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_talk, container, false)
 
     }
-
-
-    /*
-    // TODO: Rename method, update argument and hook method into UI event
-    fun onButtonPressed(uri: Uri) {
-        listener?.onFragmentInteraction(uri)
-    }
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnFragmentInteractionListener) {
-            listener = context
-        } else {
-            throw RuntimeException(context.toString() + " must implement OnFragmentInteractionListener")
-        }
-    }
-    override fun onDetach() {
-        super.onDetach()
-        listener = null
-    }
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     *
-     *
-     * See the Android Training lesson [Communicating with Other Fragments]
-     * (http://developer.android.com/training/basics/fragments/communicating.html)
-     * for more information.
-     */
-    interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        fun onFragmentInteraction(uri: Uri)
-    }
-
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment TalkFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-                TalkFragment().apply {
-                    arguments = Bundle().apply {
-                        putString(ARG_PARAM1, param1)
-                        putString(ARG_PARAM2, param2)
-                    }
-                }
-    }
-    */
 }
