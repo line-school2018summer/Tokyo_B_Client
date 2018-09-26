@@ -40,11 +40,19 @@ data class TalkListNG(val error: Int, val content: TalkListError)
 data class TalkListError(val not_authenticated: Int, val invalid_verify: Int)
 
 data class makeGroupNG(val error: Int, val content: makeGroupError)
-data class makeGroupError(val not_authenticated: Int, val invalid_verify: Int,
-                          val invalid_talk_id: Int, val personal_chat: Int,
-                          val already_joined:Int)
+data class makeGroupError(val not_authenticated: Int, val invalid_verify: Int)
+
+data class makeGroupOK(val error: Int, val content: makeGroupOKContent)
+data class makeGroupOKContent(val talk_id: Int, val message: String)
 
 class TalkFragment : Fragment() {
+    val talkListHandler = Handler()
+    val talkListRunnable = object : Runnable {
+        override fun run() {
+            getTalkListTask().execute()
+            talkListHandler.postDelayed(this, 1000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +105,7 @@ class TalkFragment : Fragment() {
                     val objOK: TalkListOK = mapper.readValue(receivedJson)
                     val talkList = objOK.content.groups
 
+                    liner_layout.removeAllViews()
                     for (key in talkList.keys){
                         val button = Button(getActivity())
                         button.text = talkList[key]
@@ -105,8 +114,9 @@ class TalkFragment : Fragment() {
                             val intent = Intent(getActivity(), TalkActivity::class.java)
                             intent.putExtra("id", homeActivity.userNumber)
                             intent.putExtra("user_id", homeActivity.userID)
+                            intent.putExtra("user_name", homeActivity.userName)
                             intent.putExtra("group_name", talkList[key])
-                            intent.putExtra("group_id", key)
+                            intent.putExtra("group_id", key.toInt())
                             intent.putExtra("token", homeActivity.userToken)
 
                             startActivity(intent)
@@ -163,6 +173,19 @@ class TalkFragment : Fragment() {
                     else if (objNG.content.invalid_verify == 1) {
                         Toast.makeText(activity, "Invalid Verification", Toast.LENGTH_LONG).show()
                     }
+                } else {
+                    val objOK: makeGroupOK = mapper.readValue(receivedJson)
+                    val talkID = objOK.content.talk_id
+                    group_name.text.clear()
+                    val intent = Intent(getActivity(), TalkActivity::class.java)
+                    val homeActivity = activity as HomeActivity
+                    intent.putExtra("id", homeActivity.userNumber)
+                    intent.putExtra("user_id", homeActivity.userID)
+                    intent.putExtra("user_name", homeActivity.userName)
+                    intent.putExtra("group_name", mGroupName)
+                    intent.putExtra("group_id", talkID)
+                    intent.putExtra("token", homeActivity.userToken)
+                    startActivity(intent)
                 }
             }
         }
@@ -174,17 +197,9 @@ class TalkFragment : Fragment() {
         talk_start_button.setOnClickListener {
             val groupName = group_name.text.toString()
             createGroupTask(groupName).execute()
-            val intent = Intent(getActivity(), TalkActivity::class.java)
-            var homeActivity = activity as HomeActivity
-            intent.putExtra("id", homeActivity.userNumber)
-            intent.putExtra("user_id", homeActivity.userID)
-            intent.putExtra("group_name", groupName)
-            intent.putExtra("token", homeActivity.userToken)
-            startActivity(intent)
         }
 
-
-        getTalkListTask().execute()
+        talkListHandler.post(talkListRunnable)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -192,5 +207,15 @@ class TalkFragment : Fragment() {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_talk, container, false)
 
+    }
+
+    override fun onStop() {
+        super.onStop()
+        talkListHandler.removeCallbacks(talkListRunnable)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        talkListHandler.post(talkListRunnable)
     }
 }

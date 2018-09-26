@@ -189,6 +189,7 @@ class FriendFragment : Fragment() {
             val text = friend.name + "\n  @" + friend.user_id
             button.text = text
             button.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            button.isAllCaps = false
             friend_layout.addView(button)
             button.setOnClickListener { makeFriendPopup(friend.name, friend.user_id) }
         }
